@@ -22,6 +22,10 @@ gilroyblack80 = loadFont('gilroy_black.ttf',80)
 gilroybold40 = loadFont('gilroy_bold.ttf',40)
 gilroybold30 = loadFont('gilroy_bold.ttf',30)
 
+# Setup - Variables
+lettering = ['a','b','c','d','e','f','g','h']
+numbering = ['1','2','3','4','5','6','7','8']
+
 def MENU_MODE():
 
     def play():
@@ -56,11 +60,11 @@ def MENU_MODE():
     textbox.disable()
 
     # play button
-    button = Button(SCREEN,325,650,150,70,
-                    text="PLAY",
+    button = Button(SCREEN,350,650,100,70,
+                    text="play",
                     textHAlign='centre',
                     textVAlign='centre',
-                    fontSize=60,
+                    font=gilroybold40,
                     textColour=(0,0,0),
                     inactiveColour=(200,200,200),
                     hoverColour=(176, 137, 104),
@@ -86,7 +90,7 @@ def MENU_MODE():
         group.draw(SCREEN)
 
         # display textbox
-        textbox.setText(f"Difficulty: {slider.getValue()}")
+        textbox.setText(f"difficulty: {slider.getValue()}")
 
         # widgets 
         pygame_widgets.update(event_list)
@@ -114,7 +118,16 @@ def ACTIVE_MODE(colour,difficulty):
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
-
+            
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                x,y = pygame.mouse.get_pos()
+                position = ""
+                if colour == 'WHITE':
+                    position = lettering[x//100] + numbering[(800-y)//100]
+                else:
+                    position = lettering[(800-x)//100] + numbering[y//100]
+                print(position)
+                 
         # display chess board
         SCREEN.blit(board,board_rect)
 

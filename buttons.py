@@ -5,16 +5,20 @@ class RadioButton(pygame.sprite.Sprite):
     def __init__(self, x, y, w, h, font, text):
         super().__init__() 
         text_surf = font.render(text, True, (0, 0, 0))
+
         self.button_image = pygame.Surface((w, h))
-        self.button_image.fill((96, 96, 96))
-        self.button_image.blit(text_surf, text_surf.get_rect(center = (w // 2, h // 2)))
+        self.button_image.fill((200,200,200))
+        self.button_image.blit(text_surf, text_surf.get_rect(center = (w // 2, h // 2 + 7)))
+        
         self.hover_image = pygame.Surface((w, h))
-        self.hover_image.fill((96, 96, 96))
-        self.hover_image.blit(text_surf, text_surf.get_rect(center = (w // 2, h // 2)))
-        pygame.draw.rect(self.hover_image, (96, 196, 96), self.hover_image.get_rect(), 3)
+        self.hover_image.fill((200,200,200))
+        self.hover_image.blit(text_surf, text_surf.get_rect(center = (w // 2, h // 2 + 7)))
+        pygame.draw.rect(self.hover_image, (176, 137, 104), self.hover_image.get_rect(), 6)
+        
         self.clicked_image = pygame.Surface((w, h))
-        self.clicked_image.fill((96, 196, 96))
-        self.clicked_image.blit(text_surf, text_surf.get_rect(center = (w // 2, h // 2)))
+        self.clicked_image.fill((176, 137, 104))
+        self.clicked_image.blit(text_surf, text_surf.get_rect(center = (w // 2, h // 2 + 7)))
+        
         self.image = self.button_image
         self.rect = pygame.Rect(x, y, w, h)
         self.clicked = False

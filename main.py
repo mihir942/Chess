@@ -20,6 +20,13 @@ SCR_HEIGHT = 800
 screen = pygame.display.set_mode((SCR_WIDTH,SCR_HEIGHT))
 clock = pygame.time.Clock()
 
+# Setup - Active
+board = loadImage('board.png').convert_alpha()
+board_rect = board.get_rect()
+board_rect.center=(SCR_WIDTH//2,SCR_HEIGHT//2)
+
+# Setup - NonActive
+
 # Main Loop
 while True:    
 
@@ -30,6 +37,9 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
+
+    # display chess board
+    screen.blit(board,board_rect)
 
     # update the whole screen every frame
     pygame.display.update()

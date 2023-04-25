@@ -8,6 +8,7 @@ import os
 from sys import exit
 from helper import *
 from buttons import *
+from sprites import *
 
 # Setup - Admin
 pygame.init()
@@ -18,13 +19,15 @@ SCREEN = pygame.display.set_mode((SCR_WIDTH,SCR_HEIGHT))
 CLOCK = pygame.time.Clock()
 gilroyregular30 = loadFont('gilroy_regular.ttf',30)
 gilroyregular40 = loadFont('gilroy_regular.ttf',40)
-gilroyblack80 = loadFont('gilroy_black.ttf',80)
-gilroybold40 = loadFont('gilroy_bold.ttf',40)
 gilroybold30 = loadFont('gilroy_bold.ttf',30)
+gilroybold40 = loadFont('gilroy_bold.ttf',40)
+gilroyblack80 = loadFont('gilroy_black.ttf',80)
 
 # Setup - Variables
 lettering = ['a','b','c','d','e','f','g','h']
 numbering = ['1','2','3','4','5','6','7','8']
+positions = [letter+number for letter in lettering for number in numbering]
+white_dict,black_dict,STEP = setCoordinates(positions,SCR_WIDTH)
 
 def MENU_MODE():
 
@@ -103,33 +106,36 @@ def MENU_MODE():
 
 def ACTIVE_MODE(colour,difficulty):
 
-    board = loadImage('board.png').convert_alpha()
+    board = loadImage('board.png').convert()
     board = pygame.transform.rotozoom(board,0,1)
     board_rect = board.get_rect()
     board_rect.center=(SCR_WIDTH//2,SCR_HEIGHT//2)
 
+    square_group = pygame.sprite.Group()
+    dict_to_use = white_dict if colour=='WHITE' else black_dict
+    for position in list(dict_to_use.keys()):
+        coord = dict_to_use[position]
+        sq = Square(position,coord,STEP)
+        square_group.add(sq)
+
     # Main Loop
     while True:    
 
+        event_list = pygame.event.get()
         # check for events
-        for event in pygame.event.get():
+        for event in event_list:
 
             # QUIT event
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
-            
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                x,y = pygame.mouse.get_pos()
-                position = ""
-                if colour == 'WHITE':
-                    position = lettering[x//100] + numbering[(800-y)//100]
-                else:
-                    position = lettering[(800-x)//100] + numbering[y//100]
-                print(position)
-                 
+
         # display chess board
         SCREEN.blit(board,board_rect)
+
+        # draw invisible squares
+        square_group.draw(SCREEN)
+        square_group.update(event_list)
 
         # update the whole screen every frame
         pygame.display.update()

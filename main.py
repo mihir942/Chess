@@ -136,7 +136,7 @@ def ACTIVE_MODE(colour,difficulty):
     for square in list(sq_coord_dict.keys()):
         coord = sq_coord_dict[square]
         piece = true_board[square]
-        sq = Square(square,coord,STEP,piece)
+        sq = Square(square,coord,piece,STEP)
         square_group.add(sq)    
 
     def displayPiecesBasedOnTrueBoard():

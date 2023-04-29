@@ -27,7 +27,7 @@ gilroyblack80 = loadFont('gilroy_black.ttf',80)
 lettering = ['a','b','c','d','e','f','g','h']
 numbering = ['1','2','3','4','5','6','7','8']
 positions = [letter+number for letter in lettering for number in numbering]
-white_dict,black_dict,STEP = setCoordinates(positions,SCR_WIDTH)
+white_dict,black_dict,STEP = setSquareCoordDictionary(positions,SCR_WIDTH)
 
 def MENU_MODE():
 
@@ -106,17 +106,54 @@ def MENU_MODE():
 
 def ACTIVE_MODE(colour,difficulty):
 
-    board = loadImage('board.png').convert()
-    board = pygame.transform.rotozoom(board,0,1)
-    board_rect = board.get_rect()
+    # background image
+    board_surf = loadImage('board.png').convert()
+    board_surf = pygame.transform.rotozoom(board_surf,0,1)
+    board_rect = board_surf.get_rect()
     board_rect.center=(SCR_WIDTH//2,SCR_HEIGHT//2)
 
+    # chess pieces
+    white_rook = pygame.transform.rotozoom(loadImage('white_rook.png'),0,0.2) 
+    white_knight = pygame.transform.rotozoom(loadImage('white_knight.png'),0,0.2)
+    white_bishop = pygame.transform.rotozoom(loadImage('white_bishop.png'),0,0.2)
+    white_queen = pygame.transform.rotozoom(loadImage('white_queen.png'),0,0.2)
+    white_king = pygame.transform.rotozoom(loadImage('white_king.png'),0,0.2)
+    white_pawn = pygame.transform.rotozoom(loadImage('white_pawn.png'),0,0.2)
+
+    black_rook = pygame.transform.rotozoom(loadImage('black_rook.png'),0,0.2)
+    black_knight = pygame.transform.rotozoom(loadImage('black_knight.png'),0,0.2)
+    black_bishop = pygame.transform.rotozoom(loadImage('black_bishop.png'),0,0.2)
+    black_queen = pygame.transform.rotozoom(loadImage('black_queen.png'),0,0.2)
+    black_king = pygame.transform.rotozoom(loadImage('black_king.png'),0,0.2)
+    black_pawn = pygame.transform.rotozoom(loadImage('black_pawn.png'),0,0.2)        
+
+    # initialising Square Sprites
     square_group = pygame.sprite.Group()
-    dict_to_use = white_dict if colour=='WHITE' else black_dict
-    for position in list(dict_to_use.keys()):
-        coord = dict_to_use[position]
-        sq = Square(position,coord,STEP)
+    sq_coord_dict = white_dict if colour=='WHITE' else black_dict
+    for square in list(sq_coord_dict.keys()):
+        coord = sq_coord_dict[square]
+        sq = Square(square,coord,STEP)
         square_group.add(sq)
+    
+    # initialising true board
+    true_board = setTrueBoardDictionary()
+
+    def setPiecesBasedOnTrueBoard():
+        for square in list(true_board.keys()):
+            piece = true_board[square]
+            coord = sq_coord_dict[square]
+            if piece == 'wR':  SCREEN.blit(white_rook,white_rook.get_rect(center=coord))
+            elif piece == 'wN': SCREEN.blit(white_knight,white_knight.get_rect(center=coord))
+            elif piece == 'wB': SCREEN.blit(white_bishop,white_bishop.get_rect(center=coord))
+            elif piece == 'wQ': SCREEN.blit(white_queen,white_queen.get_rect(center=coord))
+            elif piece == 'wK': SCREEN.blit(white_king,white_king.get_rect(center=coord))
+            elif piece == 'wP': SCREEN.blit(white_pawn,white_pawn.get_rect(center=coord))
+            elif piece == 'bR':  SCREEN.blit(black_rook,black_rook.get_rect(center=coord))
+            elif piece == 'bN': SCREEN.blit(black_knight,black_knight.get_rect(center=coord))
+            elif piece == 'bB': SCREEN.blit(black_bishop,black_bishop.get_rect(center=coord))
+            elif piece == 'bQ': SCREEN.blit(black_queen,black_queen.get_rect(center=coord))
+            elif piece == 'bK': SCREEN.blit(black_king,black_king.get_rect(center=coord))
+            elif piece == 'bP': SCREEN.blit(black_pawn,black_pawn.get_rect(center=coord))         
 
     # Main Loop
     while True:    
@@ -131,11 +168,13 @@ def ACTIVE_MODE(colour,difficulty):
                 exit()
 
         # display chess board
-        SCREEN.blit(board,board_rect)
+        SCREEN.blit(board_surf,board_rect)
 
         # draw invisible squares
         square_group.draw(SCREEN)
         square_group.update(event_list)
+
+        setPiecesBasedOnTrueBoard()
 
         # update the whole screen every frame
         pygame.display.update()

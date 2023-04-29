@@ -127,18 +127,19 @@ def ACTIVE_MODE(colour,difficulty):
     black_king = pygame.transform.rotozoom(loadImage('black_king.png'),0,0.2)
     black_pawn = pygame.transform.rotozoom(loadImage('black_pawn.png'),0,0.2)        
 
+   # initialising true board
+    true_board = setTrueBoardDictionary()
+
     # initialising Square Sprites
     square_group = pygame.sprite.Group()
     sq_coord_dict = white_dict if colour=='WHITE' else black_dict
     for square in list(sq_coord_dict.keys()):
         coord = sq_coord_dict[square]
-        sq = Square(square,coord,STEP)
-        square_group.add(sq)
-    
-    # initialising true board
-    true_board = setTrueBoardDictionary()
+        piece = true_board[square]
+        sq = Square(square,coord,STEP,piece)
+        square_group.add(sq)    
 
-    def setPiecesBasedOnTrueBoard():
+    def displayPiecesBasedOnTrueBoard():
         for square in list(true_board.keys()):
             piece = true_board[square]
             coord = sq_coord_dict[square]
@@ -156,10 +157,10 @@ def ACTIVE_MODE(colour,difficulty):
             elif piece == 'bP': SCREEN.blit(black_pawn,black_pawn.get_rect(center=coord))         
 
     # Main Loop
-    while True:    
+    while True: 
 
-        event_list = pygame.event.get()
         # check for events
+        event_list = pygame.event.get()
         for event in event_list:
 
             # QUIT event
@@ -174,7 +175,8 @@ def ACTIVE_MODE(colour,difficulty):
         square_group.draw(SCREEN)
         square_group.update(event_list)
 
-        setPiecesBasedOnTrueBoard()
+        # set initial starting pieces
+        displayPiecesBasedOnTrueBoard()
 
         # update the whole screen every frame
         pygame.display.update()

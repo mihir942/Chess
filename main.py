@@ -6,8 +6,8 @@ from pygame_widgets.button import Button
 
 import os
 from sys import exit
-from helper import *
 from buttons import *
+from helper import *
 from sprites import *
 
 # Setup - Admin
@@ -29,6 +29,7 @@ numbering = ['1','2','3','4','5','6','7','8']
 positions = [letter+number for letter in lettering for number in numbering]
 white_dict,black_dict,STEP = setSquareCoordDictionary(positions,SCR_WIDTH)
 
+# Menu Mode
 def MENU_MODE():
 
     def play():
@@ -104,6 +105,7 @@ def MENU_MODE():
         # set frame rate = 60 FPS
         CLOCK.tick_busy_loop(60)
 
+# Active Mode
 def ACTIVE_MODE(colour,difficulty):
 
     # background image
@@ -112,14 +114,13 @@ def ACTIVE_MODE(colour,difficulty):
     board_rect = board_surf.get_rect()
     board_rect.center=(SCR_WIDTH//2,SCR_HEIGHT//2)
 
-    # chess pieces
+    # loading up all chess piece images
     white_rook = pygame.transform.rotozoom(loadImage('white_rook.png'),0,0.2) 
     white_knight = pygame.transform.rotozoom(loadImage('white_knight.png'),0,0.2)
     white_bishop = pygame.transform.rotozoom(loadImage('white_bishop.png'),0,0.2)
     white_queen = pygame.transform.rotozoom(loadImage('white_queen.png'),0,0.2)
     white_king = pygame.transform.rotozoom(loadImage('white_king.png'),0,0.2)
     white_pawn = pygame.transform.rotozoom(loadImage('white_pawn.png'),0,0.2)
-
     black_rook = pygame.transform.rotozoom(loadImage('black_rook.png'),0,0.2)
     black_knight = pygame.transform.rotozoom(loadImage('black_knight.png'),0,0.2)
     black_bishop = pygame.transform.rotozoom(loadImage('black_bishop.png'),0,0.2)
@@ -127,38 +128,63 @@ def ACTIVE_MODE(colour,difficulty):
     black_king = pygame.transform.rotozoom(loadImage('black_king.png'),0,0.2)
     black_pawn = pygame.transform.rotozoom(loadImage('black_pawn.png'),0,0.2)        
 
-   # initialising true board
-    true_board = setTrueBoardDictionary()
+    # move_mode has 2 options: MOVING, NOTMOVING
+    move_mode = "NOTMOVING"
+    move_piece = ""
 
-    # initialising Square Sprites
-    square_group = pygame.sprite.Group()
+    # initialising true board dictionary
+    ## {a1: wR, a2: wP, a3: wB, ...}
+    true_board_dict = setTrueBoardDictionary()
+
+    # instantiating square-coordinate dictionary based on colour
+    ## { a1: (50,750), b2: (150,650), ...}
     sq_coord_dict = white_dict if colour=='WHITE' else black_dict
-    for square in list(sq_coord_dict.keys()):
+
+    # creating list of Square Sprites
+    square_group = pygame.sprite.Group()    
+
+    # list of squares (a1,a2,a3,...,h6,h7,h8)
+    keys = list(sq_coord_dict.keys())
+
+    # making a square sprite for each square (a1,a2,a3)
+    for square in keys:
+
+        # (50,100)  
         coord = sq_coord_dict[square]
-        piece = true_board[square]
+        
+        # bQ (black Queen)
+        piece = true_board_dict[square]
+        
+        # instantiate instance of Square
         sq = Square(square,coord,piece,STEP)
+        
+        # add instance to list of Square Sprites
         square_group.add(sq)    
 
     def displayPiecesBasedOnTrueBoard():
-        for square in list(true_board.keys()):
-            piece = true_board[square]
+
+        piece_image_dict = {
+            'wR': white_rook,'wN': white_knight,'wB': white_bishop,'wQ': white_queen,'wK': white_king,'wP': white_pawn,
+            'bR': black_rook,'bN': black_knight,'bB': black_bishop,'bQ': black_queen,'bK': black_king,'bP': black_pawn
+        }
+
+        for square in keys:
+
+            # getting piece, based on which square
+            piece = true_board_dict[square]
+            
+            # getting coordinate, based on which square
             coord = sq_coord_dict[square]
-            if piece == 'wR':  SCREEN.blit(white_rook,white_rook.get_rect(center=coord))
-            elif piece == 'wN': SCREEN.blit(white_knight,white_knight.get_rect(center=coord))
-            elif piece == 'wB': SCREEN.blit(white_bishop,white_bishop.get_rect(center=coord))
-            elif piece == 'wQ': SCREEN.blit(white_queen,white_queen.get_rect(center=coord))
-            elif piece == 'wK': SCREEN.blit(white_king,white_king.get_rect(center=coord))
-            elif piece == 'wP': SCREEN.blit(white_pawn,white_pawn.get_rect(center=coord))
-            elif piece == 'bR':  SCREEN.blit(black_rook,black_rook.get_rect(center=coord))
-            elif piece == 'bN': SCREEN.blit(black_knight,black_knight.get_rect(center=coord))
-            elif piece == 'bB': SCREEN.blit(black_bishop,black_bishop.get_rect(center=coord))
-            elif piece == 'bQ': SCREEN.blit(black_queen,black_queen.get_rect(center=coord))
-            elif piece == 'bK': SCREEN.blit(black_king,black_king.get_rect(center=coord))
-            elif piece == 'bP': SCREEN.blit(black_pawn,black_pawn.get_rect(center=coord))         
+            
+            # getting image, based on piece
+            image = piece_image_dict.get(piece)
+
+            # if there is a piece (meaning image != None) then display it
+            if piece: SCREEN.blit(image,image.get_rect(center=coord))
 
     # Main Loop
     while True: 
-
+        
         # check for events
         event_list = pygame.event.get()
         for event in event_list:
@@ -174,9 +200,10 @@ def ACTIVE_MODE(colour,difficulty):
         # draw invisible squares
         square_group.draw(SCREEN)
         for sq in square_group:
-            if sq.checkClicked(event_list): print(sq.square)
+            if sq.checkClicked(event_list): 
+                print(sq.piece)
 
-        # set initial starting pieces
+        # based on true board dictionary, set the images of all pieces
         displayPiecesBasedOnTrueBoard()
 
         # update the whole screen every frame

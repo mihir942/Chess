@@ -17,6 +17,7 @@ class Square(pygame.sprite.Sprite):
         for event in event_list:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.rect.collidepoint(event.pos):
+                    print(self.square)
                     if self.piece: 
                         return True
         return False

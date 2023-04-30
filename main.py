@@ -173,7 +173,8 @@ def ACTIVE_MODE(colour,difficulty):
 
         # draw invisible squares
         square_group.draw(SCREEN)
-        square_group.update(event_list)
+        for sq in square_group:
+            if sq.checkClicked(event_list): print(sq.square)
 
         # set initial starting pieces
         displayPiecesBasedOnTrueBoard()

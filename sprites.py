@@ -11,17 +11,12 @@ class Square(pygame.sprite.Sprite):
 
         self.image = pygame.Surface((STEP*2,STEP*2),pygame.SRCALPHA)
         self.rect = self.image.get_rect(center=coord)
-        self.highlight = False
 
-    def update(self,event_list):
-
-        if self.highlight:
-            self.image.fill((235, 210, 52))
-        else:
-            self.image.fill((0,0,0,0))
+    def checkClicked(self,event_list):
 
         for event in event_list:
             if event.type == pygame.MOUSEBUTTONDOWN:
                 if self.rect.collidepoint(event.pos):
-                    print(self.piece)
-                    if self.piece: self.highlight = not self.highlight
+                    if self.piece: 
+                        return True
+        return False

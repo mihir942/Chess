@@ -1,11 +1,12 @@
 import pygame
 import os
 
-# Functions to load resources
+# Function to load image resources
 def loadImage(name):
     working_dir = os.path.dirname(__file__)
     return pygame.image.load(working_dir + "/images/" + name)
 
+# Function to load font resources
 def loadFont(name,size):
     working_dir = os.path.dirname(__file__)
     full_path = working_dir + "/font/" + name
@@ -20,14 +21,12 @@ def setSquareCoordDictionary(positions,SCREEN_WIDTH) -> tuple:
     x_coord = list(range(SMALL,BIG+SMALL,SMALL*2))
     y_coord = list(reversed(x_coord))
     coordinates = [(x,y) for x in x_coord for y in y_coord]
-
     white_dict = dict(zip(positions,coordinates))
     black_dict = dict(zip(list(reversed(positions)),coordinates))
-
     return (white_dict,black_dict,SMALL)
 
 # Function to set true board dictionary
-## {a1: wR, a2: wN, a3: wB, ...}
+## {a1: wR, a2: wP, a3: wB, ...}
 def setTrueBoardDictionary() -> dict:
     return {
             'a8': 'bR','b8': 'bN','c8': 'bB','d8': 'bQ','e8': 'bK','f8': 'bB','g8': 'bN','h8': 'bR',
@@ -40,4 +39,3 @@ def setTrueBoardDictionary() -> dict:
             'a1': 'wR','b1': 'wN','c1': 'wB','d1': 'wQ','e1': 'wK','f1': 'wB','g1': 'wN','h1': 'wR'
         }
 
-    

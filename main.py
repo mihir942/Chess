@@ -133,12 +133,14 @@ def ACTIVE_MODE(colour,difficulty):
     board_rect = board_surf.get_rect()
     board_rect.center=(SCR_WIDTH//2,SCR_HEIGHT//2)   
 
-    # move_mode has 2 options: DOWN, UP
+    # move variables
     move_mode = "UP"
     move_piece = ""
     move_piece_image = None
     move_square_source = ""
     move_square_dest = ""
+    move_square_sprite_source = None
+    move_square_sprite_dest = None
 
     # initialising true board dictionary
     ## {a1: wR, a2: wP, a3: wB, ...}
@@ -168,10 +170,10 @@ def ACTIVE_MODE(colour,difficulty):
         piece_image = piece_image_dict.get(piece)
 
         # instantiate instance of Square
-        sq = Square(square,coord,piece,piece_image,STEP)
+        sq_sprite = Square(square,coord,piece,piece_image,STEP)
         
         # add instance to list of Square Sprites
-        square_group.add(sq)    
+        square_group.add(sq_sprite)    
 
     def displayPiecesBasedOnTrueBoard():
 
@@ -193,6 +195,11 @@ def ACTIVE_MODE(colour,difficulty):
                 else:        
                     SCREEN.blit(image,image.get_rect(center=coord))
 
+    def checkValiditiy(move):
+        pass
+
+    def playComputerMove():
+        pass
 
     # Main Loop
     while True: 
@@ -213,19 +220,44 @@ def ACTIVE_MODE(colour,difficulty):
         square_group.draw(SCREEN)
         
         # check for moves
-        for sq in square_group:
-            clicked = sq.check_clicked(event_list)
-            if sq.piece and clicked:
+        for sq_sprite in square_group:
+            
+            clicked = sq_sprite.check_clicked(event_list)
+            
+            if sq_sprite.piece and clicked:
+                
                 move_mode = "DOWN"
                 move_piece = clicked[0]
+                move_piece_image = clicked[1]
                 move_square_source = clicked[2]
-
-            unclicked = sq.check_unclicked(event_list)
+                move_square_sprite_source = sq_sprite
+                
+            unclicked = sq_sprite.check_unclicked(event_list)
+            
             if unclicked:
+                
                 if move_mode == "DOWN":
+                    
                     move_mode = "UP"
                     move_square_dest = unclicked[2]
-                    print(move_square_source+move_square_dest)
+                    move_square_sprite_dest = sq_sprite
+                    
+                    # play move
+                    true_board_dict[move_square_source] = ""
+                    true_board_dict[move_square_dest] = move_piece
+
+                    move_square_sprite_source.piece = ""
+                    move_square_sprite_source.piece_image = None
+
+                    move_square_sprite_dest.piece = move_piece
+                    move_square_sprite_dest.piece_image = move_piece_image
+
+                    move_piece = ""
+                    move_piece_image = None
+                    move_square_source = ""
+                    move_square_dest = ""
+                    move_square_sprite_source = None
+                    move_square_sprite_dest = None
 
         # based on true board dictionary, set the images of all pieces
         displayPiecesBasedOnTrueBoard()

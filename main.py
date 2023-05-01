@@ -212,19 +212,20 @@ def ACTIVE_MODE(colour,difficulty):
         # draw invisible squares
         square_group.draw(SCREEN)
         
+        # check for moves
         for sq in square_group:
             clicked = sq.check_clicked(event_list)
-            if clicked:
+            if sq.piece and clicked:
                 move_mode = "DOWN"
                 move_piece = clicked[0]
                 move_square_source = clicked[2]
-                print("SOURCE",move_square_source,move_piece)
 
             unclicked = sq.check_unclicked(event_list)
             if unclicked:
-                move_mode = "UP"
-                move_square_dest = unclicked[2]
-                print("DEST",move_square_dest)
+                if move_mode == "DOWN":
+                    move_mode = "UP"
+                    move_square_dest = unclicked[2]
+                    print(move_square_source+move_square_dest)
 
         # based on true board dictionary, set the images of all pieces
         displayPiecesBasedOnTrueBoard()

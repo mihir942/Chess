@@ -1,11 +1,12 @@
 from stockfish import Stockfish
 sf = Stockfish("C:/Users/mihir/Downloads/stockfish_15.1/stockfish.exe",depth=18,parameters={"Threads": 2, "Minimum Thinking Time": 30})
 
-def isValidMove(board,move):
-    
 
-# from stockfish import Stockfish
-# sf = Stockfish("C:/Users/mihir/Downloads/stockfish_15.1/stockfish.exe",depth=18,parameters={"Threads": 2, "Minimum Thinking Time": 30})
+sf.set_fen_position("8/8/8/8/8/1Q6/2K5/k7 b - - 0 1")
+print(sf.get_top_moves())
+
+# print(sf.get_evaluation())
+
 # print(sf.get_board_visual())
 
 # sf.set_elo_rating(2500)

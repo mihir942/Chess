@@ -4,7 +4,9 @@ from pygame_widgets.slider import Slider
 from pygame_widgets.textbox import TextBox
 from pygame_widgets.button import Button
 
-import os
+from stockfish import Stockfish
+sf = Stockfish("C:/Users/mihir/Downloads/stockfish_15.1/stockfish.exe",depth=18,parameters={"Threads": 2, "Minimum Thinking Time": 30})
+
 from sys import exit
 from buttons import *
 from helper import *
@@ -22,6 +24,12 @@ gilroyregular40 = loadFont('gilroy_regular.ttf',40)
 gilroybold30 = loadFont('gilroy_bold.ttf',30)
 gilroybold40 = loadFont('gilroy_bold.ttf',40)
 gilroyblack80 = loadFont('gilroy_black.ttf',80)
+
+# background image
+board_surf = loadImage('board.png').convert()
+board_surf = pygame.transform.rotozoom(board_surf,0,1)
+board_rect = board_surf.get_rect()
+board_rect.center=(SCR_WIDTH//2,SCR_HEIGHT//2)  
 
 # loading up all chess piece images
 white_rook = pygame.transform.rotozoom(loadImage('white_rook.png'),0,0.2) 
@@ -41,6 +49,11 @@ black_pawn = pygame.transform.rotozoom(loadImage('black_pawn.png'),0,0.2)
 piece_image_dict = {
     'wR': white_rook,'wN': white_knight,'wB': white_bishop,'wQ': white_queen,'wK': white_king,'wP': white_pawn,
     'bR': black_rook,'bN': black_knight,'bB': black_bishop,'bQ': black_queen,'bK': black_king,'bP': black_pawn }
+
+
+# initialising true board dictionary
+## {a1: wR, a2: wP, a3: wB, ...}
+true_board_dict = setTrueBoardDictionary()
 
 # Setup - Variables
 lettering = ['a','b','c','d','e','f','g','h']
@@ -127,11 +140,9 @@ def MENU_MODE():
 # Active Mode
 def ACTIVE_MODE(colour,difficulty):
 
-    # background image
-    board_surf = loadImage('board.png').convert()
-    board_surf = pygame.transform.rotozoom(board_surf,0,1)
-    board_rect = board_surf.get_rect()
-    board_rect.center=(SCR_WIDTH//2,SCR_HEIGHT//2)   
+    # stockfish parameters
+    elo = int(difficulty / 100 * 3000)
+    sf.set_elo_rating(elo) 
 
     # move variables
     move_mode = "UP"
@@ -141,10 +152,6 @@ def ACTIVE_MODE(colour,difficulty):
     move_square_dest = ""
     move_square_sprite_source = None
     move_square_sprite_dest = None
-
-    # initialising true board dictionary
-    ## {a1: wR, a2: wP, a3: wB, ...}
-    true_board_dict = setTrueBoardDictionary()
 
     # instantiating square-coordinate dictionary based on colour
     ## { a1: (50,750), b2: (150,650), ...}
@@ -195,11 +202,8 @@ def ACTIVE_MODE(colour,difficulty):
                 else:        
                     SCREEN.blit(image,image.get_rect(center=coord))
 
-    def checkValiditiy(move):
-        pass
-
-    def playComputerMove():
-        pass
+    def isValidMove(move):
+        return sf.is_move_correct(move) 
 
     # Main Loop
     while True: 
@@ -231,7 +235,7 @@ def ACTIVE_MODE(colour,difficulty):
                 move_piece_image = clicked[1]
                 move_square_source = clicked[2]
                 move_square_sprite_source = sq_sprite
-                
+
             unclicked = sq_sprite.check_unclicked(event_list)
             
             if unclicked:
@@ -242,15 +246,45 @@ def ACTIVE_MODE(colour,difficulty):
                     move_square_dest = unclicked[2]
                     move_square_sprite_dest = sq_sprite
                     
-                    # play move
-                    true_board_dict[move_square_source] = ""
-                    true_board_dict[move_square_dest] = move_piece
+                    move = move_square_source+move_square_dest
 
-                    move_square_sprite_source.piece = ""
-                    move_square_sprite_source.piece_image = None
+                    if isValidMove(move):
+                        print("h")
+                        # play move
+                        true_board_dict[move_square_source] = ""
+                        true_board_dict[move_square_dest] = move_piece
 
-                    move_square_sprite_dest.piece = move_piece
-                    move_square_sprite_dest.piece_image = move_piece_image
+                        displayPiecesBasedOnTrueBoard()
+                        pygame.display.update()
+
+                        move_square_sprite_source.piece = ""
+                        move_square_sprite_source.piece_image = None
+
+                        move_square_sprite_dest.piece = move_piece
+                        move_square_sprite_dest.piece_image = move_piece_image
+                        
+                        sf.make_moves_from_current_position([move])
+                        
+                        print("Move:",move)
+                        print(sf.get_board_visual())
+                        
+                        eval = sf.get_evaluation()
+                        eval_type = eval["type"]
+                        
+                        if (eval_type == "mate") or len(sf.get_top_moves()) == 0:
+                            print("Checkmate/Stalemate")
+                            MENU_MODE()
+                        else:
+                            # play computer move
+
+                            computer_move = sf.get_best_move(500)
+                            sf.make_moves_from_current_position([computer_move])
+                            source = computer_move[0:2]
+                            dest = computer_move[2:4]
+                            piece_to_move = true_board_dict[source]
+                            true_board_dict[source] = ""
+                            true_board_dict[dest] = piece_to_move
+                            print(sf.get_board_visual())
 
                     move_piece = ""
                     move_piece_image = None

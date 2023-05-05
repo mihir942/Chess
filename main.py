@@ -50,7 +50,6 @@ piece_image_dict = {
     'wR': white_rook,'wN': white_knight,'wB': white_bishop,'wQ': white_queen,'wK': white_king,'wP': white_pawn,
     'bR': black_rook,'bN': black_knight,'bB': black_bishop,'bQ': black_queen,'bK': black_king,'bP': black_pawn }
 
-
 # initialising true board dictionary
 ## {a1: wR, a2: wP, a3: wB, ...}
 true_board_dict = setTrueBoardDictionary()
@@ -197,14 +196,31 @@ def ACTIVE_MODE(colour,difficulty):
                 
             # if there is a piece (meaning image != None) then display it
             if piece: 
+                
+                # manually checks every piece to see whether it's being clicked on
+
+                # clicked on => then blit the image at the mouse position
                 if (piece == move_piece) and (square == move_square_source) and (move_mode == "DOWN"):
                     SCREEN.blit(image,image.get_rect(center=pygame.mouse.get_pos()))
+                
+                # not clicked on => blit the image at its coordinates, as found from true board
                 else:        
                     SCREEN.blit(image,image.get_rect(center=coord))
 
     def isValidMove(move):
         return sf.is_move_correct(move) 
 
+    # if user's colour is black, computer makes the first move 
+    if colour == 'BLACK':
+        computer_move = sf.get_best_move_time(200)
+        sf.make_moves_from_current_position([computer_move])
+        source = computer_move[0:2]
+        dest = computer_move[2:4]
+        piece_to_move = true_board_dict[source]
+        true_board_dict[source] = ""
+        true_board_dict[dest] = piece_to_move
+        print(sf.get_board_visual())
+        
     # Main Loop
     while True: 
         
@@ -267,6 +283,7 @@ def ACTIVE_MODE(colour,difficulty):
                         
                         print("Move:",move)
                         print(sf.get_board_visual())
+
                         
                         eval = sf.get_evaluation()
                         eval_type = eval["type"]
@@ -277,7 +294,7 @@ def ACTIVE_MODE(colour,difficulty):
                         else:
                             # play computer move
 
-                            computer_move = sf.get_best_move(500)
+                            computer_move = sf.get_best_move_time(200)
                             sf.make_moves_from_current_position([computer_move])
                             source = computer_move[0:2]
                             dest = computer_move[2:4]

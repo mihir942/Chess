@@ -5,7 +5,7 @@ from pygame_widgets.textbox import TextBox
 from pygame_widgets.button import Button
 
 from stockfish import Stockfish
-sf = Stockfish("C:/Users/mihir/Downloads/stockfish_15.1/stockfish.exe",depth=18,parameters={"Threads": 2, "Minimum Thinking Time": 30})
+sf = Stockfish("C:/Users/mihir/Downloads/stockfish_15.1/stockfish.exe",depth=18,parameters={"Hash":64,"Threads": 8, "Minimum Thinking Time": 30})
 
 from sys import exit
 from buttons import *
@@ -145,19 +145,20 @@ def MENU_MODE():
         CLOCK.tick_busy_loop(60)
 
 # Active Mode
-def ACTIVE_MODE(colour,difficulty):
+def ACTIVE_MODE(player_colour,difficulty):
 
-    # stockfish parameters
+    # setting difficulty of stockfish
     elo = int(difficulty / 100 * 3000)
     sf.set_elo_rating(elo) 
 
     # move variables
-    source_sprite = None
-    dest_sprite = None
-    
+    SOURCE_SPRITE = None
+    DEST_SPRITE = None
+    TURN = "WHITE"
+
     # instantiating square-coordinate dictionary based on colour
     ## { a1: (50,750), b2: (150,650), ...}
-    sq_coord_dict = white_dict if colour=='WHITE' else black_dict
+    sq_coord_dict = white_dict if player_colour=='WHITE' else black_dict
 
     # creating list of Square Sprites
     square_group = pygame.sprite.Group()    
@@ -180,6 +181,7 @@ def ACTIVE_MODE(colour,difficulty):
         # add instance to list of Square Sprites
         square_group.add(sq_sprite)    
 
+    # based on true board dictionary, show the piece images on screen at the right positions
     def displayPiecesBasedOnTrueBoard():
 
         for square in squares:
@@ -192,80 +194,148 @@ def ACTIVE_MODE(colour,difficulty):
             
             # getting image, based on piece
             image = piece_image_dict.get(piece)
-                
+            
+            # if there is a piece on the square
             if piece:
-                if (source_sprite) and (piece == source_sprite.piece) and (square == source_sprite.square): 
+
+                # if source sprite exists, AND the piece + square match source sprite's, 
+                # aka it's being dragged upon by the mouse
+                # make it follow mouse position 
+                
+                if SOURCE_SPRITE and (piece == SOURCE_SPRITE.piece) and (square == SOURCE_SPRITE.square): 
                     SCREEN.blit(image,image.get_rect(center=pygame.mouse.get_pos()))
+                
+                # otherwise, make piece appear at coordinates as specified by dictionary
                 else:
                     SCREEN.blit(image,image.get_rect(center=coord))
 
+    # What this function does is to check for castling.
+    # Updates the rook movement based on hardcoded values in castling_dict
+    # Why? The move alone only updates the king's values. 
+    def castlingRookUpdate(move):
+
+        # if move is one of 4 legal castling moves...
+        if move in list(castling_dict.keys()):
+
+            # getting rook's movement info from castling_dict
+            rook_source_square = castling_dict[move][0]
+            rook_dest_square = castling_dict[move][1]
+            rook_colour = castling_dict[move][2]
+
+            # updating rook movement in true board
+            true_board_dict[rook_source_square] = ""
+            true_board_dict[rook_dest_square] = rook_colour
+
+            # updating rook movement amongst the sprites
+            for sq_sprite in square_group:
+                 if sq_sprite.square == rook_source_square: sq_sprite.piece = ""
+                 if sq_sprite.square == rook_dest_square: sq_sprite.piece = rook_colour  
+
+    # perform the player's move
     def doMoveIfValid(move):
-        print(f"Move: {move}")
-        
+        nonlocal TURN
+
+        # if it's a valid move
         if sf.is_move_correct(move):
 
-            moving_piece = source_sprite.piece
+            # what piece to move?
+            moving_piece = SOURCE_SPRITE.piece
 
+            # update piece movement in true board
             true_board_dict[move[0:2]] = ""
             true_board_dict[move[2:4]] = moving_piece
 
-            source_sprite.piece = ""
-            dest_sprite.piece = moving_piece
+            # update piece movement amongst the sprites
+            SOURCE_SPRITE.piece = ""
+            DEST_SPRITE.piece = moving_piece
 
-            # check for castling
-            if move in list(castling_dict.keys()):
-                rook_source_square = castling_dict[move][0]
-                rook_dest_square = castling_dict[move][1]
-                rook_colour = castling_dict[move][2]
+            # update castling rook movements (if any)
+            castlingRookUpdate(move)
 
-                true_board_dict[rook_source_square] = ""
-                true_board_dict[rook_dest_square] = rook_colour
-
-                for sq_sprite in square_group:
-                    if sq_sprite.square == rook_source_square: sq_sprite.piece = ""
-                    if sq_sprite.square == rook_dest_square: sq_sprite.piece = rook_colour
-            
+            # make the move on stockfish
             sf.make_moves_from_current_position([move])
-            print(sf.get_board_visual())
+            
+            # change turns
+            TURN = "WHITE" if TURN == "BLACK" else "BLACK"
 
     # Main Loop
     while True: 
         
-        # check for events
-        event_list = pygame.event.get()
-        for event in event_list:
+        # if computer's turn, do computer's move
+        if (TURN != player_colour):
+
+            # gets computer move within 300 ms
+            computer_move = sf.get_best_move_time(300)
+            
+            # "e2e4" -> source_square becomes e2, dest_square becomes e4
+            source_square = computer_move[0:2]
+            dest_square = computer_move[2:4]
+
+            piece_to_move = true_board_dict[source_square]
+            
+            # updating the move in true board
+            true_board_dict[source_square] = ""
+            true_board_dict[dest_square] = piece_to_move
+
+            # updating the sprites about the pieces attached to them
+            for sq_sprite in square_group:
+                if sq_sprite.square == source_square: sq_sprite.piece = ""
+                if sq_sprite.square == dest_square: sq_sprite.piece = piece_to_move
+            
+            # update castling rook movements (if any)
+            castlingRookUpdate(computer_move)
+            
+            # make the move on our stockfish instance
+            sf.make_moves_from_current_position([computer_move])
+            
+            # change turns
+            TURN = "WHITE" if TURN == "BLACK" else "BLACK"
+
+        # check for events (QUIT, MOUSE CLICK, MOUSE UNCLICK)
+        for event in pygame.event.get():
 
             # QUIT event
             if event.type == pygame.QUIT:
                 pygame.quit()
                 exit()
 
-            # MOUSE CLICK event
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                for sq_sprite in square_group:
-                    if sq_sprite.rect.collidepoint(event.pos):
+            # check for player input only on THEIR TURN
+            if (TURN == player_colour):
 
-                        # set source sprite once mouse clicked down
-                        source_sprite = sq_sprite
-                        print(f"Piece: {sq_sprite.piece} | Square: {sq_sprite.square}")
+                # MOUSE CLICK event
+                if event.type == pygame.MOUSEBUTTONDOWN:
 
-            # MOUSE UNCLICK event
-            if event.type == pygame.MOUSEBUTTONUP:
-                for sq_sprite in square_group:
-                    if sq_sprite.rect.collidepoint(event.pos) and source_sprite:
-                            
-                        # put the move together
-                        move = source_sprite.square + sq_sprite.square
-                            
-                        # update destination sprite
-                        dest_sprite = sq_sprite
-                            
-                        # perform move, if valid
-                        doMoveIfValid(move)
-                            
-                        # reset move variables
-                        source_sprite = None
-                        dest_sprite = None
+                    # check all sprites to see if mouse pos inside its rect
+                    for sq_sprite in square_group:
+
+                        # is the mouse position, at the time of click, within this square sprite?
+                        if sq_sprite.rect.collidepoint(event.pos):
+
+                            # set source sprite once mouse clicked down
+                            SOURCE_SPRITE = sq_sprite
+                            print(f"Piece: {sq_sprite.piece} | Square: {sq_sprite.square}")
+
+                # MOUSE UNCLICK event
+                if event.type == pygame.MOUSEBUTTONUP:
+
+                    # check all sprites to see if mouse pos inside its rect
+                    for sq_sprite in square_group:
+
+                        # is the mouse position, at the time of unclick, within this square sprite? AND there was a source sprite?
+                        if sq_sprite.rect.collidepoint(event.pos) and SOURCE_SPRITE:
+                                
+                            # put the move together
+                            move = SOURCE_SPRITE.square + sq_sprite.square
+                                
+                            # update destination sprite
+                            DEST_SPRITE = sq_sprite
+                                
+                            # perform move, if valid
+                            doMoveIfValid(move)
+                                
+                            # reset move variables
+                            SOURCE_SPRITE = None
+                            DEST_SPRITE = None
 
         # display chess board
         SCREEN.blit(board_surf,board_rect)

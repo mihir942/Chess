@@ -54,6 +54,14 @@ piece_image_dict = {
 ## {a1: wR, a2: wP, a3: wB, ...}
 true_board_dict = setTrueBoardDictionary()
 
+# initialising castling dictionary
+castling_dict = {
+    "e1g1":("h1","f1","wR"),
+    "e1c1":("a1","d1","wR"),
+    "e8g8":("h8","f8","bR"),
+    "e8c8":("a8","d8","bR"), 
+}
+
 # Setup - Variables
 lettering = ['a','b','c','d','e','f','g','h']
 numbering = ['1','2','3','4','5','6','7','8']
@@ -144,14 +152,9 @@ def ACTIVE_MODE(colour,difficulty):
     sf.set_elo_rating(elo) 
 
     # move variables
-    move_mode = "UP"
-    move_piece = ""
-    move_piece_image = None
-    move_square_source = ""
-    move_square_dest = ""
-    move_square_sprite_source = None
-    move_square_sprite_dest = None
-
+    source_sprite = None
+    dest_sprite = None
+    
     # instantiating square-coordinate dictionary based on colour
     ## { a1: (50,750), b2: (150,650), ...}
     sq_coord_dict = white_dict if colour=='WHITE' else black_dict
@@ -160,30 +163,26 @@ def ACTIVE_MODE(colour,difficulty):
     square_group = pygame.sprite.Group()    
 
     # list of squares (a1,a2,a3,...,h6,h7,h8)
-    keys = list(sq_coord_dict.keys())
+    squares = list(sq_coord_dict.keys())
 
     # making a square sprite for each square (a1,a2,a3)
-    for square in keys:
+    for square in squares:
 
         # (50,100)  
         coord = sq_coord_dict[square]
         
         # bQ (black Queen)
         piece = true_board_dict[square]
-        
-        # piece image (white_rook)
-        # if piece_image is None, so be it. 
-        piece_image = piece_image_dict.get(piece)
 
         # instantiate instance of Square
-        sq_sprite = Square(square,coord,piece,piece_image,STEP)
+        sq_sprite = Square(square,coord,piece,STEP)
         
         # add instance to list of Square Sprites
         square_group.add(sq_sprite)    
 
     def displayPiecesBasedOnTrueBoard():
 
-        for square in keys:
+        for square in squares:
 
             # getting piece, based on square
             piece = true_board_dict[square]
@@ -194,30 +193,41 @@ def ACTIVE_MODE(colour,difficulty):
             # getting image, based on piece
             image = piece_image_dict.get(piece)
                 
-            # if there is a piece (meaning image != None) then display it
-            if piece: 
-                
-                # manually checks every piece to see whether it's being clicked on
-
-                # clicked on => then blit the image at the mouse position
-                if (piece == move_piece) and (square == move_square_source) and (move_mode == "DOWN"):
+            if piece:
+                if (source_sprite) and (piece == source_sprite.piece) and (square == source_sprite.square): 
                     SCREEN.blit(image,image.get_rect(center=pygame.mouse.get_pos()))
-                
-                # not clicked on => blit the image at its coordinates, as found from true board
-                else:        
+                else:
                     SCREEN.blit(image,image.get_rect(center=coord))
 
-    # if user's colour is black, computer makes the first move 
-    if colour == 'BLACK':
-        computer_move = sf.get_best_move_time(200)
-        sf.make_moves_from_current_position([computer_move])
-        source = computer_move[0:2]
-        dest = computer_move[2:4]
-        piece_to_move = true_board_dict[source]
-        true_board_dict[source] = ""
-        true_board_dict[dest] = piece_to_move
-        print(sf.get_board_visual())
+    def doMoveIfValid(move):
+        print(f"Move: {move}")
         
+        if sf.is_move_correct(move):
+
+            moving_piece = source_sprite.piece
+
+            true_board_dict[move[0:2]] = ""
+            true_board_dict[move[2:4]] = moving_piece
+
+            source_sprite.piece = ""
+            dest_sprite.piece = moving_piece
+
+            # check for castling
+            if move in list(castling_dict.keys()):
+                rook_source_square = castling_dict[move][0]
+                rook_dest_square = castling_dict[move][1]
+                rook_colour = castling_dict[move][2]
+
+                true_board_dict[rook_source_square] = ""
+                true_board_dict[rook_dest_square] = rook_colour
+
+                for sq_sprite in square_group:
+                    if sq_sprite.square == rook_source_square: sq_sprite.piece = ""
+                    if sq_sprite.square == rook_dest_square: sq_sprite.piece = rook_colour
+            
+            sf.make_moves_from_current_position([move])
+            print(sf.get_board_visual())
+
     # Main Loop
     while True: 
         
@@ -230,90 +240,39 @@ def ACTIVE_MODE(colour,difficulty):
                 pygame.quit()
                 exit()
 
+            # MOUSE CLICK event
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                for sq_sprite in square_group:
+                    if sq_sprite.rect.collidepoint(event.pos):
+
+                        # set source sprite once mouse clicked down
+                        source_sprite = sq_sprite
+                        print(f"Piece: {sq_sprite.piece} | Square: {sq_sprite.square}")
+
+            # MOUSE UNCLICK event
+            if event.type == pygame.MOUSEBUTTONUP:
+                for sq_sprite in square_group:
+                    if sq_sprite.rect.collidepoint(event.pos) and source_sprite:
+                            
+                        # put the move together
+                        move = source_sprite.square + sq_sprite.square
+                            
+                        # update destination sprite
+                        dest_sprite = sq_sprite
+                            
+                        # perform move, if valid
+                        doMoveIfValid(move)
+                            
+                        # reset move variables
+                        source_sprite = None
+                        dest_sprite = None
+
         # display chess board
         SCREEN.blit(board_surf,board_rect)
 
         # draw invisible squares
         square_group.draw(SCREEN)
-        
-        # check for moves
-        for sq_sprite in square_group:
-            
-            # check if the square is clicked on AND has a piece attached to it
-            clicked = sq_sprite.check_clicked(event_list)
-            
-            if sq_sprite.piece and clicked:
-
-                # set the "move" variables    
-                move_mode = "DOWN"
-                move_piece = clicked[0]
-                move_piece_image = clicked[1]
-                move_square_source = clicked[2]
-                move_square_sprite_source = sq_sprite
-
-            # which square the mouse has been unclicked on? (to make the move)
-            unclicked = sq_sprite.check_unclicked(event_list)
-            
-            if unclicked and move_mode == "DOWN":
-                    
-                move_mode = "UP"
-                move_square_dest = unclicked[2]
-                move_square_sprite_dest = sq_sprite
-                move = move_square_source+move_square_dest
-                
-                # if move is valid
-                if sf.is_move_correct(move):
-                        
-                    # play move
-
-                    # set true board dictionary to new values. source to empty. dest to the piece moved
-                    true_board_dict[move_square_source] = ""
-                    true_board_dict[move_square_dest] = move_piece
-
-                    # update the display with the true board ** NOTE the dual call of pygame.display.update()
-                    displayPiecesBasedOnTrueBoard()
-                    pygame.display.update()
-
-                    # resetting the "move" variables
-                    move_square_sprite_source.piece = ""
-                    move_square_sprite_source.piece_image = None
-
-                    move_square_sprite_dest.piece = move_piece
-                    move_square_sprite_dest.piece_image = move_piece_image
-                        
-                    sf.make_moves_from_current_position([move])
-                        
-                    print("Move:",move)
-                    print(sf.get_board_visual())
-                   
-                        
-                    # if, after the player moved, it's checkmate or stalemate, end the game, go to MENU
-                    eval = sf.get_evaluation()
-                    eval_type = eval["type"]
-                    if (eval_type == "mate") or len(sf.get_top_moves()) == 0:
-                        print("Checkmate/Stalemate")
-                        MENU_MODE()
-                    
-                    # if all is good (no mates), play computer move
-                    else:
-
-                        # play computer move
-                        computer_move = sf.get_best_move_time(200)
-                        sf.make_moves_from_current_position([computer_move])
-                        source = computer_move[0:2]
-                        dest = computer_move[2:4]
-                        piece_to_move = true_board_dict[source]
-                        true_board_dict[source] = ""
-                        true_board_dict[dest] = piece_to_move
-                        print(sf.get_board_visual())
-
-                move_piece = ""
-                move_piece_image = None
-                move_square_source = ""
-                move_square_dest = ""
-                move_square_sprite_source = None
-                move_square_sprite_dest = None
-
+      
         # based on true board dictionary, set the images of all pieces
         displayPiecesBasedOnTrueBoard()
 

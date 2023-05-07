@@ -254,7 +254,8 @@ def ACTIVE_MODE(player_colour,difficulty):
 
             # make the move on stockfish
             sf.make_moves_from_current_position([move])
-            
+            print(sf.get_board_visual())
+
             # change turns
             TURN = "WHITE" if TURN == "BLACK" else "BLACK"
 
@@ -265,7 +266,7 @@ def ACTIVE_MODE(player_colour,difficulty):
         if (TURN != player_colour):
 
             # gets computer move within 300 ms
-            computer_move = sf.get_best_move_time(300)
+            computer_move = sf.get_best_move()
             
             # "e2e4" -> source_square becomes e2, dest_square becomes e4
             source_square = computer_move[0:2]
@@ -287,7 +288,9 @@ def ACTIVE_MODE(player_colour,difficulty):
             
             # make the move on our stockfish instance
             sf.make_moves_from_current_position([computer_move])
-            
+            print(f"Computer move: {computer_move}")
+            print(sf.get_board_visual())
+
             # change turns
             TURN = "WHITE" if TURN == "BLACK" else "BLACK"
 
@@ -313,7 +316,6 @@ def ACTIVE_MODE(player_colour,difficulty):
 
                             # set source sprite once mouse clicked down
                             SOURCE_SPRITE = sq_sprite
-                            print(f"Piece: {sq_sprite.piece} | Square: {sq_sprite.square}")
 
                 # MOUSE UNCLICK event
                 if event.type == pygame.MOUSEBUTTONUP:

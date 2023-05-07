@@ -261,7 +261,7 @@ def ACTIVE_MODE(player_colour,difficulty):
 
     # Main Loop
     while True: 
-        
+
         # if computer's turn, do computer's move
         if (TURN != player_colour):
 
@@ -272,6 +272,7 @@ def ACTIVE_MODE(player_colour,difficulty):
             source_square = computer_move[0:2]
             dest_square = computer_move[2:4]
 
+            # finding out which piece to move based on what squares the computer said
             piece_to_move = true_board_dict[source_square]
             
             # updating the move in true board

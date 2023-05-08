@@ -212,10 +212,10 @@ def ACTIVE_MODE(player_colour,difficulty):
     # What this function does is to check for castling.
     # Updates the rook movement based on hardcoded values in castling_dict
     # Why? The move alone only updates the king's values. 
-    def castlingRookUpdate(move):
+    def castlingRookUpdate(move,piece):
 
         # if move is one of 4 legal castling moves...
-        if move in list(castling_dict.keys()):
+        if move in list(castling_dict.keys()) and (piece == "wK" or piece == "bK"):
 
             # getting rook's movement info from castling_dict
             rook_source_square = castling_dict[move][0]
@@ -250,7 +250,7 @@ def ACTIVE_MODE(player_colour,difficulty):
             DEST_SPRITE.piece = moving_piece
 
             # update castling rook movements (if any)
-            castlingRookUpdate(move)
+            castlingRookUpdate(move,moving_piece)
 
             # make the move on stockfish
             sf.make_moves_from_current_position([move])
@@ -285,7 +285,7 @@ def ACTIVE_MODE(player_colour,difficulty):
                 if sq_sprite.square == dest_square: sq_sprite.piece = piece_to_move
             
             # update castling rook movements (if any)
-            castlingRookUpdate(computer_move)
+            castlingRookUpdate(computer_move, piece_to_move)
             
             # make the move on our stockfish instance
             sf.make_moves_from_current_position([computer_move])

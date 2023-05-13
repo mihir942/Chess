@@ -209,7 +209,7 @@ def ACTIVE_MODE(player_colour,difficulty):
                 else:
                     SCREEN.blit(image,image.get_rect(center=coord))
 
-    # What this function does is to check for castling.
+    # This function checks for castling.
     # Updates the rook movement based on hardcoded values in castling_dict
     # Why? The move alone only updates the king's values. 
     def castlingRookUpdate(move,piece):
@@ -231,6 +231,36 @@ def ACTIVE_MODE(player_colour,difficulty):
                  if sq_sprite.square == rook_source_square: sq_sprite.piece = ""
                  if sq_sprite.square == rook_dest_square: sq_sprite.piece = rook_colour  
 
+    # This function checks for en passant.
+    # Updates the captured pawn square on true board, and its related sprite
+    # Why? En Passant is a special move, for which the pawn taken is horizontally beside the pawn taking. 
+    def enPassantUpdate(move,piece):
+
+        # checking if move is en passant
+        if (sf.will_move_be_a_capture(move) == Stockfish.Capture.EN_PASSANT):
+            
+            # e5f6 => source_square is e5, dest_square is f6
+            source_square = move[0:2]
+            dest_square = move[2:4]
+            
+            # if piece is white, then the square of the captured pawn is like so: e5f6 => f5 (numerically one lower)
+            if piece[0] == "w":
+                square_number = int(dest_square[1]) - 1
+            
+            # if piece is black, then the square of the captured pawn is like so: c4d3 => d4 (numerically one higher)
+            else:
+                square_number = int(dest_square[1]) + 1
+            
+            # calculating the square of the captured pawn
+            pawn_captured_square = dest_square[0] + str(square_number)
+            
+            # updating the square value on true board 
+            true_board_dict[pawn_captured_square] = ""
+            
+            # updating the sprite attached to this square
+            for sq_sprite in square_group:
+                if (sq_sprite.square == pawn_captured_square): sq_sprite.piece = ""  
+
     # perform the player's move
     def doMoveIfValid(move):
         nonlocal TURN
@@ -251,6 +281,9 @@ def ACTIVE_MODE(player_colour,difficulty):
 
             # update castling rook movements (if any)
             castlingRookUpdate(move,moving_piece)
+            
+            # updating en passant move (if any)
+            enPassantUpdate(move,moving_piece)
 
             # make the move on stockfish
             sf.make_moves_from_current_position([move])
@@ -264,7 +297,6 @@ def ACTIVE_MODE(player_colour,difficulty):
 
         # if computer's turn, do computer's move
         if (TURN != player_colour):
-
             # gets computer move within 300 ms
             computer_move = sf.get_best_move()
             
@@ -285,8 +317,11 @@ def ACTIVE_MODE(player_colour,difficulty):
                 if sq_sprite.square == dest_square: sq_sprite.piece = piece_to_move
             
             # update castling rook movements (if any)
-            castlingRookUpdate(computer_move, piece_to_move)
+            castlingRookUpdate(computer_move,piece_to_move)
             
+            # updating en passant move (if any)
+            enPassantUpdate(computer_move,piece_to_move)
+
             # make the move on our stockfish instance
             sf.make_moves_from_current_position([computer_move])
             print(f"Computer move: {computer_move}")
@@ -326,16 +361,16 @@ def ACTIVE_MODE(player_colour,difficulty):
 
                         # is the mouse position, at the time of unclick, within this square sprite? AND there was a source sprite?
                         if sq_sprite.rect.collidepoint(event.pos) and SOURCE_SPRITE:
-                                
+                                    
                             # put the move together
                             move = SOURCE_SPRITE.square + sq_sprite.square
-                                
+                                    
                             # update destination sprite
                             DEST_SPRITE = sq_sprite
-                                
+                                    
                             # perform move, if valid
                             doMoveIfValid(move)
-                                
+                                    
                             # reset move variables
                             SOURCE_SPRITE = None
                             DEST_SPRITE = None

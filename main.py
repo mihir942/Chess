@@ -6,7 +6,9 @@ from pygame_widgets.button import Button
 
 from stockfish import Stockfish
 sf = Stockfish("C:/Users/mihir/Downloads/stockfish_15.1/stockfish.exe",depth=18,parameters={"Hash":64,"Threads": 8, "Minimum Thinking Time": 30})
+import chess
 
+from random import randint
 from sys import exit
 from buttons import *
 from helper import *
@@ -49,10 +51,6 @@ black_pawn = pygame.transform.rotozoom(loadImage('black_pawn.png'),0,0.2)
 piece_image_dict = {
     'wR': white_rook,'wN': white_knight,'wB': white_bishop,'wQ': white_queen,'wK': white_king,'wP': white_pawn,
     'bR': black_rook,'bN': black_knight,'bB': black_bishop,'bQ': black_queen,'bK': black_king,'bP': black_pawn }
-
-# initialising true board dictionary
-## {a1: wR, a2: wP, a3: wB, ...}
-true_board_dict = setTrueBoardDictionary()
 
 # initialising castling dictionary
 castling_dict = {
@@ -147,9 +145,19 @@ def MENU_MODE():
 # Active Mode
 def ACTIVE_MODE(player_colour,difficulty):
 
+    # game state variable, has 3 values: "ongoing","mate","promotion"
+    GAME_STATE = "ongoing"
+
     # setting difficulty of stockfish
     elo = int(difficulty / 100 * 3000)
     sf.set_elo_rating(elo) 
+
+    # reset stockfish to initial position
+    sf.set_fen_position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+    
+    # initialising true board dictionary
+    ## {a1: wR, a2: wP, a3: wB, ...}
+    true_board_dict = setTrueBoardDictionary()
 
     # move variables
     SOURCE_SPRITE = None
@@ -201,7 +209,6 @@ def ACTIVE_MODE(player_colour,difficulty):
                 # if source sprite exists, AND the piece + square match source sprite's, 
                 # aka it's being dragged upon by the mouse
                 # make it follow mouse position 
-                
                 if SOURCE_SPRITE and (piece == SOURCE_SPRITE.piece) and (square == SOURCE_SPRITE.square): 
                     SCREEN.blit(image,image.get_rect(center=pygame.mouse.get_pos()))
                 
@@ -209,7 +216,7 @@ def ACTIVE_MODE(player_colour,difficulty):
                 else:
                     SCREEN.blit(image,image.get_rect(center=coord))
 
-    # This function checks for castling.
+    # This function checks for "Castling".
     # Updates the rook movement based on hardcoded values in castling_dict
     # Why? The move alone only updates the king's values. 
     def castlingRookUpdate(move,piece):
@@ -231,9 +238,9 @@ def ACTIVE_MODE(player_colour,difficulty):
                  if sq_sprite.square == rook_source_square: sq_sprite.piece = ""
                  if sq_sprite.square == rook_dest_square: sq_sprite.piece = rook_colour  
 
-    # This function checks for en passant.
+    # This function checks for "En Passant".
     # Updates the captured pawn square on true board, and its related sprite
-    # Why? En Passant is a special move, for which the pawn taken is horizontally beside the pawn taking. 
+    # Why? "En Passant" is a special move, for which the pawn taken is horizontally beside the pawn taking. 
     def enPassantUpdate(move,piece):
 
         # checking if move is en passant
@@ -261,9 +268,19 @@ def ACTIVE_MODE(player_colour,difficulty):
             for sq_sprite in square_group:
                 if (sq_sprite.square == pawn_captured_square): sq_sprite.piece = ""  
 
+    # check for checkmates / stalemates after every move. 
+    def checkForMates():
+        board = chess.Board(sf.get_fen_position())
+
+        if board.is_checkmate() or board.is_stalemate():
+            return board.outcome()
+        else:
+            return False
+
     # perform the player's move
     def doMoveIfValid(move):
         nonlocal TURN
+        nonlocal GAME_STATE
 
         # if it's a valid move
         if sf.is_move_correct(move):
@@ -289,6 +306,10 @@ def ACTIVE_MODE(player_colour,difficulty):
             sf.make_moves_from_current_position([move])
             print(sf.get_board_visual())
 
+            # check for checkmate/stalemate
+            if checkForMates():
+                GAME_STATE = "mate"
+
             # change turns
             TURN = "WHITE" if TURN == "BLACK" else "BLACK"
 
@@ -297,8 +318,9 @@ def ACTIVE_MODE(player_colour,difficulty):
 
         # if computer's turn, do computer's move
         if (TURN != player_colour):
-            # gets computer move within 300 ms
-            computer_move = sf.get_best_move()
+
+            # gets computer move within "x" ms, where "x" is chosen randomly from 700-1000
+            computer_move = sf.get_best_move_time(randint(700,1000))
             
             # "e2e4" -> source_square becomes e2, dest_square becomes e4
             source_square = computer_move[0:2]
@@ -327,10 +349,14 @@ def ACTIVE_MODE(player_colour,difficulty):
             print(f"Computer move: {computer_move}")
             print(sf.get_board_visual())
 
+            # check for checkmate/stalemate
+            if checkForMates():
+                GAME_STATE = "mate"
+
             # change turns
             TURN = "WHITE" if TURN == "BLACK" else "BLACK"
 
-        # check for events (QUIT, MOUSE CLICK, MOUSE UNCLICK)
+        # check for events
         for event in pygame.event.get():
 
             # QUIT event
@@ -338,42 +364,54 @@ def ACTIVE_MODE(player_colour,difficulty):
                 pygame.quit()
                 exit()
 
-            # check for player input only on THEIR TURN
-            if (TURN == player_colour):
+            # MOUSE CLICK event, when the game is ongoing
+            if GAME_STATE == "ongoing":
 
-                # MOUSE CLICK event
-                if event.type == pygame.MOUSEBUTTONDOWN:
+                # check for player input only on THEIR TURN
+                if (TURN == player_colour):
 
-                    # check all sprites to see if mouse pos inside its rect
-                    for sq_sprite in square_group:
+                    # MOUSE CLICK event
+                    if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
 
-                        # is the mouse position, at the time of click, within this square sprite?
-                        if sq_sprite.rect.collidepoint(event.pos):
+                        # check all sprites to see if mouse pos inside its rect
+                        for sq_sprite in square_group:
 
-                            # set source sprite once mouse clicked down
-                            SOURCE_SPRITE = sq_sprite
+                            # is the mouse position, at the time of click, within this square sprite?
+                            if sq_sprite.rect.collidepoint(event.pos):
 
-                # MOUSE UNCLICK event
-                if event.type == pygame.MOUSEBUTTONUP:
+                                # set source sprite once mouse clicked down
+                                SOURCE_SPRITE = sq_sprite
 
-                    # check all sprites to see if mouse pos inside its rect
-                    for sq_sprite in square_group:
+                    # MOUSE UNCLICK event
+                    if event.type == pygame.MOUSEBUTTONUP and event.button == 1:
 
-                        # is the mouse position, at the time of unclick, within this square sprite? AND there was a source sprite?
-                        if sq_sprite.rect.collidepoint(event.pos) and SOURCE_SPRITE:
-                                    
-                            # put the move together
-                            move = SOURCE_SPRITE.square + sq_sprite.square
-                                    
-                            # update destination sprite
-                            DEST_SPRITE = sq_sprite
-                                    
-                            # perform move, if valid
-                            doMoveIfValid(move)
-                                    
-                            # reset move variables
-                            SOURCE_SPRITE = None
-                            DEST_SPRITE = None
+                        # check all sprites to see if mouse pos inside its rect
+                        for sq_sprite in square_group:
+
+                            # is the mouse position, at the time of unclick, within this square sprite? AND there was a source sprite?
+                            if sq_sprite.rect.collidepoint(event.pos) and SOURCE_SPRITE:
+                                        
+                                # put the move together
+                                move = SOURCE_SPRITE.square + sq_sprite.square
+                                        
+                                # update destination sprite
+                                DEST_SPRITE = sq_sprite
+                                        
+                                # perform move, if valid
+                                doMoveIfValid(move)
+                                        
+                                # reset move variables
+                                SOURCE_SPRITE = None
+                                DEST_SPRITE = None
+
+            # SPACE event to go to menu screen, when the game is checkmated/stalemated            
+            elif GAME_STATE == "mate":
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE: 
+                    MENU_MODE()
+
+            # R,N,B,Q events to promote to rook, knight, bishop or queen, when a pawn is being promoted in game
+            elif GAME_STATE == "promotion":
+                pass
 
         # display chess board
         SCREEN.blit(board_surf,board_rect)
@@ -384,6 +422,33 @@ def ACTIVE_MODE(player_colour,difficulty):
         # based on true board dictionary, set the images of all pieces
         displayPiecesBasedOnTrueBoard()
 
+
+        # When the game state is in "mate" (checkmate/stalemate),
+        # display mate message, option to restart
+        if GAME_STATE == "mate":
+            
+            # get outcome
+            outcome = checkForMates()
+            
+            # if checkmate, then tell user it's checkmate, along with which colour won
+            if outcome.termination == chess.Termination.CHECKMATE:
+                colour = "White" if outcome.winner else "Black"
+                msg_text = f"Checkmate! {colour} won."
+
+            # if stalemate, then tell user it's stalemate
+            elif outcome.termination == chess.Termination.STALEMATE:
+                msg_text = f"Stalemate!"
+
+            # show the message, whatever it is, on the screen    
+            msg_surf = gilroyregular30.render(f"{msg_text} Press SPACE to go to main menu",True,'red','grey')
+            msg_rect = msg_surf.get_rect(center=(400,350))
+            SCREEN.blit(msg_surf,msg_rect)
+
+        # When the game state is in "promotion",
+        # display promotion message, options (R=Rook,N=Knight,B=Bishop,Q=Queen)
+        elif GAME_STATE == "promotion":
+            pass
+        
         # update the whole screen every frame
         pygame.display.update()
 

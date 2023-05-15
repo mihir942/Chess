@@ -217,10 +217,13 @@ def ACTIVE_MODE(player_colour,difficulty):
                 # make it follow mouse position 
                 if source_sprite and (piece == source_sprite.piece) and (square == source_sprite.square): 
                     SCREEN.blit(image,image.get_rect(center=pygame.mouse.get_pos()))
-                
+                    
                 # otherwise, make piece appear at coordinates as specified by dictionary
                 else:
-                    SCREEN.blit(image,image.get_rect(center=coord))
+                    try:
+                        SCREEN.blit(image,image.get_rect(center=coord))
+                    except AttributeError as err:
+                            print(f"DEBUG,{piece},{image},{square}")
 
     # This function checks for "Castling".
     # Updates the rook movement based on hardcoded values in castling_dict
@@ -284,46 +287,85 @@ def ACTIVE_MODE(player_colour,difficulty):
             return False
 
     # perform the player's move
-    def doMoveIfValid(move):
+    def doMoveIfValid(move,promotion_piece):
         nonlocal turn
         nonlocal game_state
         nonlocal highlight_sprite_1, highlight_sprite_2
 
-        # if it's a valid move
-        if SF.is_move_correct(move):
-
-            # what piece to move?
-            moving_piece = source_sprite.piece
-
-            # update piece movement in true board
-            true_board_dict[move[0:2]] = ""
-            true_board_dict[move[2:4]] = moving_piece
-
-            # update piece movement amongst the sprites
-            source_sprite.piece = ""
-            dest_sprite.piece = moving_piece
-
-            # highlight sprites to indicate most recent move
-            unhighlightAllSprites()
-            source_sprite.image.fill((255, 244, 143))
-            dest_sprite.image.fill((255, 244, 143))
-
-            # update castling rook movements (if any)
-            castlingRookUpdate(move,moving_piece)
+        # if not promoting (which is most moves)
+        if not promotion_piece: 
             
-            # updating en passant move (if any)
-            enPassantUpdate(move,moving_piece)
+            # if it's a valid move
+            if SF.is_move_correct(move):
 
-            # make the move on stockfish
-            SF.make_moves_from_current_position([move])
-            print(SF.get_board_visual())
+                # what piece to move?
+                moving_piece = source_sprite.piece
 
-            # check for checkmate/stalemate
-            if checkForMates():
-                game_state = "mate"
+                # update piece movement in true board
+                true_board_dict[move[0:2]] = ""
+                true_board_dict[move[2:4]] = moving_piece
 
-            # change turns
-            turn = "WHITE" if turn == "BLACK" else "BLACK"
+                # update piece movement amongst the sprites
+                source_sprite.piece = ""
+                dest_sprite.piece = moving_piece
+
+                # highlight sprites to indicate most recent move
+                unhighlightAllSprites()
+                source_sprite.image.fill((255, 244, 143))
+                dest_sprite.image.fill((255, 244, 143))
+
+                # update castling rook movements (if any)
+                castlingRookUpdate(move,moving_piece)
+                    
+                # updating en passant move (if any)
+                enPassantUpdate(move,moving_piece)
+
+                # make the move on stockfish
+                SF.make_moves_from_current_position([move])
+                print(SF.get_board_visual())
+
+                # check for checkmate/stalemate
+                if checkForMates():
+                    game_state = "mate"
+
+                # change turns
+                turn = "WHITE" if turn == "BLACK" else "BLACK"
+            
+        # if promoting
+        else:
+            
+            # if promotion piece is wR, stockfish suffix becomes 'r'. bQ becomes 'q'
+            stockfish_suffix = promotion_piece[1].lower()
+
+            # if move is correct
+            if SF.is_move_correct(move+stockfish_suffix):
+
+                # update promotion piece movement in true board
+                true_board_dict[move[0:2]] = ""
+                true_board_dict[move[2:4]] = promotion_piece
+
+                # update promotion piece movement amongst the sprites
+                source_sprite.piece = ""
+                dest_sprite.piece = promotion_piece
+
+                # highlight sprites to indicate most recent move
+                unhighlightAllSprites()
+                source_sprite.image.fill((255, 244, 143))
+                dest_sprite.image.fill((255, 244, 143))
+
+                # make the move on stockfish (first translate the move)
+                SF.make_moves_from_current_position([move+stockfish_suffix])
+                print(SF.get_board_visual())
+                
+                # check for checkmate/stalemate
+                if checkForMates():
+                    game_state = "mate"
+
+                # change turns
+                turn = "WHITE" if turn == "BLACK" else "BLACK"
+
+                # game state: changes from "promotion" to "ongoing"
+                game_state = "ongoing"
 
     # Main Loop
     while True: 
@@ -414,13 +456,22 @@ def ACTIVE_MODE(player_colour,difficulty):
                                         
                                 # update destination sprite
                                 dest_sprite = sq_sprite
-                                        
-                                # perform move, if valid
-                                doMoveIfValid(move)
-                                        
-                                # reset move variables
-                                source_sprite = None
-                                dest_sprite = None
+                                                                
+                                # Is the move a promotion move? If so, change game state, check for promotion input
+                                # the below 2 are just temp variables helping to check for promotion
+                                source_number = int(source_sprite.square[1])
+                                dest_number = int(sq_sprite.square[1])
+                                if (source_number == 7 and dest_number == 8 and source_sprite.piece == 'wP') or (source_number == 2 and dest_number == 1 and source_sprite.piece == 'bP'):
+                                    game_state = "promotion"
+
+                                # A normal move, you say? Proceed as per normal - perform move
+                                else:
+                                    # perform move, if valid
+                                    doMoveIfValid(move,None)
+
+                                    # reset move variables
+                                    source_sprite = None
+                                    dest_sprite = None
 
             # SPACE event to go to menu screen, when the game is checkmated/stalemated            
             elif game_state == "mate":
@@ -429,23 +480,67 @@ def ACTIVE_MODE(player_colour,difficulty):
 
             # R,N,B,Q events to promote to rook, knight, bishop or queen, when a pawn is being promoted in game
             elif game_state == "promotion":
+
+                # if ANY key pressed when in promotion mode
                 if event.type == pygame.KEYDOWN:
                     
-                    # rook
+                    # getting move -> for determining move variable later on
+                    move = source_sprite.square + dest_sprite.square
+
+                    # getting colour of piece moved -> for determining promotion_piece variable later on
+                    colour = source_sprite.piece[0]
+
+                    # r pressed = rook
                     if event.key == pygame.K_r:
-                        pass
-                    
-                    # bishop
+                        
+                        # setting promotion piece -> e.g. wR, bR
+                        promotion_piece = colour + 'R'
+
+                        # perform promotion move, if valid
+                        doMoveIfValid(move,promotion_piece)
+                        
+                        # reset move variables
+                        source_sprite = None
+                        dest_sprite = None
+                   
+                    # b pressed = bishop
                     elif event.key == pygame.K_b:
-                        pass
+                        
+                        # setting promotion piece -> e.g. wB, bB
+                        promotion_piece = colour + 'B'
+
+                        # perform promotion move, if valid
+                        doMoveIfValid(move,promotion_piece)
+
+                        # reset move variables
+                        source_sprite = None
+                        dest_sprite = None
                     
-                    # knight
+                    # n pressed = knight
                     elif event.key == pygame.K_n:
-                        pass
+                        
+                        # setting promotion piece -> e.g. wN, bN
+                        promotion_piece = colour + 'N'
+
+                        # perform promotion move, if valid
+                        doMoveIfValid(move,promotion_piece)
+
+                        # reset move variables
+                        source_sprite = None
+                        dest_sprite = None
                     
-                    # queen
+                    # q pressed = queen
                     elif event.key == pygame.K_q:
-                        pass
+                                                
+                        # setting promotion piece -> e.g. wQ, bQ
+                        promotion_piece = colour + 'Q'
+
+                        # perform promotion move, if valid
+                        doMoveIfValid(move,promotion_piece)
+
+                        # reset move variables
+                        source_sprite = None
+                        dest_sprite = None
                     
         # display chess board
         SCREEN.blit(board_surf,board_rect)

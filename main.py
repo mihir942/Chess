@@ -149,8 +149,9 @@ def ACTIVE_MODE(player_colour,difficulty):
     game_state = "ongoing"
 
     # setting difficulty of stockfish
-    elo = int(difficulty / 100 * 3000)
+    elo = int(difficulty / 100 * 2000)
     SF.set_elo_rating(elo) 
+    print(elo)
 
     # reset stockfish to initial position
     SF.set_fen_position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
@@ -382,10 +383,6 @@ def ACTIVE_MODE(player_colour,difficulty):
 
             # finding out which piece to move based on what squares the computer said
             piece_to_move = true_board_dict[source_square]
-            
-            # updating the move in true board
-            true_board_dict[source_square] = ""
-            true_board_dict[dest_square] = piece_to_move
 
             # updating the sprites about the pieces attached to them 
             # AND highlight the source,dest sprites to indicate most recent piece movement
@@ -398,11 +395,29 @@ def ACTIVE_MODE(player_colour,difficulty):
                     sq_sprite.piece = piece_to_move
                     sq_sprite.image.fill((255, 244, 143))
 
-            # update castling rook movements (if any)
-            castlingRookUpdate(computer_move,piece_to_move)
-            
-            # updating en passant move (if any)
-            enPassantUpdate(computer_move,piece_to_move)
+
+            # if it's a promotion move. e.g. e7e8q (where the length is 5, since the suffix q is present)
+            # then update the true board in this unique way
+            if len(computer_move) > 4:
+                
+                promotion_piece = turn[0].lower() + computer_move[-1].upper()
+
+                # updating the promotion move in true board
+                true_board_dict[source_square] = ""
+                true_board_dict[dest_square] = promotion_piece
+
+            # not a promotion move? update true board the normal way, check for castling/enPassant updates
+            else:
+
+                # updating the move in true board
+                true_board_dict[source_square] = ""
+                true_board_dict[dest_square] = piece_to_move
+
+                # update castling rook movements (if any)
+                castlingRookUpdate(computer_move,piece_to_move)
+                
+                # updating en passant move (if any)
+                enPassantUpdate(computer_move,piece_to_move)
 
             # make the move on our stockfish instance
             SF.make_moves_from_current_position([computer_move])

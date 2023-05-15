@@ -151,7 +151,6 @@ def ACTIVE_MODE(player_colour,difficulty):
     # setting difficulty of stockfish
     elo = int(difficulty / 100 * 2000)
     SF.set_elo_rating(elo) 
-    print(elo)
 
     # reset stockfish to initial position
     SF.set_fen_position("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")

@@ -374,7 +374,7 @@ def ACTIVE_MODE(player_colour,difficulty):
         if (turn != player_colour):
 
             # gets computer move within "x" ms, where "x" is chosen randomly from 700-1000
-            computer_move = SF.get_best_move_time(randint(700,1000))
+            computer_move = SF.get_best_move_time(randint(1500,2000))
             
             # "e2e4" -> source_square becomes e2, dest_square becomes e4
             source_square = computer_move[0:2]

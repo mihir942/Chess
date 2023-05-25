@@ -12,6 +12,11 @@ def loadFont(name,size):
     full_path = working_dir + "/font/" + name
     return pygame.font.Font(full_path,size)
 
+def loadStockfish():
+    working_dir = os.path.dirname(__file__)
+    full_path = working_dir + "/stockfish/" + "stockfish.exe"
+    return full_path
+
 # Function to generate square-coordinate dictionary. 
 ## { a1: (50,750), b2: (150,650), ...}
 def setSquareCoordDictionary(positions,SCREEN_WIDTH) -> tuple:

@@ -4,15 +4,15 @@ from pygame_widgets.slider import Slider
 from pygame_widgets.textbox import TextBox
 from pygame_widgets.button import Button
 
-from stockfish import Stockfish
-SF = Stockfish("C:/Users/mihir/Downloads/stockfish_15.1/stockfish.exe",depth=18,parameters={"Hash":64,"Threads": 8, "Minimum Thinking Time": 30})
-import chess
-
 from random import randint
 from sys import exit
 from buttons import *
 from helper import *
 from sprites import *
+
+from stockfish import Stockfish
+SF = Stockfish(loadStockfish(),depth=18,parameters={"Hash":64,"Threads": 8, "Minimum Thinking Time": 30})
+import chess
 
 # Setup - Admin
 pygame.init()
